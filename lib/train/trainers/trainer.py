@@ -7,7 +7,10 @@ from torch.nn import DataParallel
 
 class Trainer(object):
     def __init__(self, network):
-        network = network.cuda()
+        try:
+            network = network.cuda()
+        except:
+            pass
         network = DataParallel(network)
         self.network = network
 
@@ -29,44 +32,48 @@ class Trainer(object):
         max_iter = len(data_loader)
         self.network.train()
         end = time.time()
-        for iteration, batch in enumerate(data_loader):
-            data_time = time.time() - end
-            iteration = iteration + 1
-            recorder.step += 1
+        try:
+            for iteration, batch in enumerate(data_loader):
+                data_time = time.time() - end
+                iteration = iteration + 1
+                recorder.step += 1
 
-            # batch = self.to_cuda(batch)
-            output, loss, loss_stats, image_stats = self.network(batch)
+                # batch = self.to_cuda(batch)
+                output, loss, loss_stats, image_stats = self.network(batch)
+                print("FIN")
 
-            # training stage: loss; optimizer; scheduler
-            loss = loss.mean()
-            optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_value_(self.network.parameters(), 40)
-            optimizer.step()
+                # training stage: loss; optimizer; scheduler
+                loss = loss.mean()
+                optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_value_(self.network.parameters(), 40)
+                optimizer.step()
 
-            # data recording stage: loss_stats, time, image_stats
-            loss_stats = self.reduce_loss_stats(loss_stats)
-            recorder.update_loss_stats(loss_stats)
+                # data recording stage: loss_stats, time, image_stats
+                loss_stats = self.reduce_loss_stats(loss_stats)
+                recorder.update_loss_stats(loss_stats)
 
-            batch_time = time.time() - end
-            end = time.time()
-            recorder.batch_time.update(batch_time)
-            recorder.data_time.update(data_time)
+                batch_time = time.time() - end
+                end = time.time()
+                recorder.batch_time.update(batch_time)
+                recorder.data_time.update(data_time)
 
-            if iteration % 20 == 0 or iteration == (max_iter - 1):
-                # print training state
-                eta_seconds = recorder.batch_time.global_avg * (max_iter - iteration)
-                eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
-                lr = optimizer.param_groups[0]['lr']
-                memory = torch.cuda.max_memory_allocated() / 1024.0 / 1024.0
+                if iteration % 20 == 0 or iteration == (max_iter - 1):
+                    # print training state
+                    eta_seconds = recorder.batch_time.global_avg * (max_iter - iteration)
+                    eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
+                    lr = optimizer.param_groups[0]['lr']
+                    memory = torch.cuda.max_memory_allocated() / 1024.0 / 1024.0
 
-                training_state = '  '.join(['eta: {}', '{}', 'lr: {:.6f}', 'max_mem: {:.0f}'])
-                training_state = training_state.format(eta_string, str(recorder), lr, memory)
-                print(training_state)
+                    training_state = '  '.join(['eta: {}', '{}', 'lr: {:.6f}', 'max_mem: {:.0f}'])
+                    training_state = training_state.format(eta_string, str(recorder), lr, memory)
+                    print(training_state)
 
-                # record loss_stats and image_dict
-                recorder.update_image_stats(image_stats)
-                recorder.record('train')
+                    # record loss_stats and image_dict
+                    recorder.update_image_stats(image_stats)
+                    recorder.record('train')
+        except Exception as e:
+            print(e)
 
     def val(self, epoch, data_loader, evaluator=None, recorder=None):
         self.network.eval()
@@ -100,4 +107,3 @@ class Trainer(object):
 
         if recorder:
             recorder.record('val', epoch, val_loss_stats, image_stats)
-

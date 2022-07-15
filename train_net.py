@@ -1,14 +1,17 @@
-from lib.config import cfg, args
+import torch.multiprocessing
+from lib.config.config import cfg, args
+from lib.datasets import make_data_loader
+from lib.evaluators import make_evaluator
 from lib.networks import make_network
 from lib.train import make_trainer, make_optimizer, make_lr_scheduler, make_recorder, set_lr_scheduler
-from lib.datasets import make_data_loader
 from lib.utils.net_utils import load_model, save_model, load_network
-from lib.evaluators import make_evaluator
-import torch.multiprocessing
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def setup_seed(seed=3):
     import random, os
-    import numpy as np 
+    import numpy as np
     np.random.seed(seed)
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -16,42 +19,45 @@ def setup_seed(seed=3):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.enabled = True
 
 
 DEBUG = True
+
+
 def train(cfg, network):
     trainer = make_trainer(cfg, network)
     optimizer = make_optimizer(cfg, network)
     scheduler = make_lr_scheduler(cfg, optimizer)
     recorder = make_recorder(cfg)
-    #evaluator = make_evaluator(cfg)
+    evaluator = make_evaluator(cfg)
 
     if cfg.network_full_init:
         begin_epoch = load_network(network, cfg.model_dir, resume=cfg.resume, epoch=cfg.test.epoch)
         begin_epoch = 0
     else:
         begin_epoch = load_model(network, optimizer, scheduler, recorder, cfg.model_dir, resume=cfg.resume)
-
-    # set_lr_scheduler(cfg, scheduler)
+    set_lr_scheduler(cfg, scheduler)
     if DEBUG:
         print('------------------Loading training set-------------------')
     train_loader = make_data_loader(cfg, is_train=True)
     if DEBUG:
         print('Loading training set done...')
         print('---------------------------------------------------------')
-    #val_loader = make_data_loader(cfg, is_train=False)
+    val_loader = make_data_loader(cfg, is_train=False)
 
     for epoch in range(begin_epoch, cfg.train.epoch):
         recorder.epoch = epoch
         trainer.train(epoch, train_loader, optimizer, recorder)
         scheduler.step()
 
-        if (epoch + 1) % cfg.save_ep == 0:
-            save_model(network, optimizer, scheduler, recorder, epoch, cfg.model_dir)
+        # if (epoch + 1) % cfg.save_ep == 0:
+        save_model(network, optimizer, scheduler, recorder, epoch, cfg.model_dir)
 
-        #if (epoch + 1) % cfg.eval_ep == 0:
-        #    trainer.val(epoch, val_loader, evaluator, recorder)
+        # if (epoch + 1) % cfg.eval_ep == 0:
+        trainer.val(epoch, val_loader, evaluator, recorder)
 
+    print("RN")
     return network
 
 
@@ -66,7 +72,7 @@ def test(cfg, network):
 def main():
     if DEBUG:
         print('------------------------------------------------------------')
-        print('args',args)
+        print('args', args)
         print('cfg:')
         import pprint
         pprint.pprint(cfg)

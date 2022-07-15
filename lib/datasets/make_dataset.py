@@ -7,13 +7,14 @@ import imp
 import os
 from .collate_batch import make_collator
 
-
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 DEBUG = True
+
+
 def _dataset_factory(data_source, task):
     module = '.'.join(['lib.datasets', data_source, task])
-    path = os.path.join('lib/datasets', data_source, task+'.py')
+    path = os.path.join('lib/datasets', data_source, task + '.py')
     if DEBUG:
         print('module:', module)
         print('path:', path)
@@ -24,7 +25,7 @@ def _dataset_factory(data_source, task):
 def make_dataset(cfg, dataset_name, transforms, is_train=True):
     args = DatasetCatalog.get(dataset_name)
     data_source = args['id']
-    
+
     if DEBUG:
         print('args:', args)
         print('data_source:', data_source)

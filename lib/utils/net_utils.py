@@ -9,6 +9,8 @@ from termcolor import colored
 from sklearn.utils.extmath import cartesian
 
 DEBUG = False
+
+
 def sigmoid(x):
     y = torch.clamp(x.sigmoid(), min=1e-4, max=1 - 1e-4)
     return y
@@ -23,7 +25,6 @@ def _neg_loss(pred, gt):
     '''
     pos_inds = gt.eq(1).float()
     neg_inds = gt.lt(1).float()
-
 
     neg_weights = torch.pow(1 - gt, 4)
 
@@ -45,6 +46,7 @@ def _neg_loss(pred, gt):
 
 class FocalLoss(nn.Module):
     '''nn.Module warpper for focal loss'''
+
     def __init__(self):
         super(FocalLoss, self).__init__()
         self.neg_loss = _neg_loss
@@ -175,6 +177,7 @@ class PolyMatchingLoss(nn.Module):
 
         return torch.mean(min_dis)
 
+
 class DistanceConstraint(nn.Module):
     def __init__(self, type='log'):
         super(DistanceConstraint, self).__init__()
@@ -186,18 +189,19 @@ class DistanceConstraint(nn.Module):
         weight = weight.unsqueeze(2)
         valid_output = output * weight
         valid_target = target * weight
-        pred_w1 = valid_output[...,0:1]
-        pred_h1 = valid_output[...,1:2]
-        pred_w2 = valid_output[...,2:3]
-        pred_h2 = valid_output[...,3:4]
+        pred_w1 = valid_output[..., 0:1]
+        pred_h1 = valid_output[..., 1:2]
+        pred_w2 = valid_output[..., 2:3]
+        pred_h2 = valid_output[..., 3:4]
 
         x1 = torch.min(pred_w1, pred_w2) / (torch.max(pred_w1, pred_w2) + 1e-6)
         x2 = torch.min(pred_h1, pred_h2) / (torch.max(pred_h1, pred_h2) + 1e-6)
         dist_constraint_loss = -torch.log(x1 + x2)
-        #print('dist_constraint_loss.size:', dist_constraint_loss.size())
-        
-        dist_constraint_loss = torch.sum(dist_constraint_loss)/(torch.sum(weight) + 1e-6)
+        # print('dist_constraint_loss.size:', dist_constraint_loss.size())
+
+        dist_constraint_loss = torch.sum(dist_constraint_loss) / (torch.sum(weight) + 1e-6)
         return dist_constraint_loss
+
 
 class RegionIOU(nn.Module):
     def __init__(self, type='log'):
@@ -218,26 +222,29 @@ class RegionIOU(nn.Module):
             print('weight:', weight)
         valid_output = output * weight
         valid_target = target * weight
-        gt_w1 = valid_target[...,0:1]
-        gt_h1 = valid_target[...,1:2]
-        gt_w2 = valid_target[...,2:3]
-        gt_h2 = valid_target[...,3:4]
-        pred_w1 = valid_output[...,0:1]
-        pred_h1 = valid_output[...,1:2]
-        pred_w2 = valid_output[...,2:3]
-        pred_h2 = valid_output[...,3:4]
+        gt_w1 = valid_target[..., 0:1]
+        gt_h1 = valid_target[..., 1:2]
+        gt_w2 = valid_target[..., 2:3]
+        gt_h2 = valid_target[..., 3:4]
+        pred_w1 = valid_output[..., 0:1]
+        pred_h1 = valid_output[..., 1:2]
+        pred_w2 = valid_output[..., 2:3]
+        pred_h2 = valid_output[..., 3:4]
         gt_area = (gt_w1 + gt_w2) * (gt_h1 + gt_h2)
         pred_area = (pred_w1 + pred_w2) * (pred_h1 + pred_h2)
         union_w = torch.min(gt_w1, pred_w1) + torch.min(gt_w2, pred_w2)
         union_h = torch.min(gt_h1, pred_h1) + torch.min(gt_h2, pred_h2)
         intersect_area = union_w * union_h
         union_area = gt_area + pred_area - intersect_area
-        iou = -torch.log((intersect_area + 1.0)/(union_area + 1.0))
-        avg_iou = torch.sum(iou)/(torch.sum(weight)+1e-6)
+        iou = -torch.log((intersect_area + 1.0) / (union_area + 1.0))
+        avg_iou = torch.sum(iou) / (torch.sum(weight) + 1e-6)
         return avg_iou
+
+
 class AveragedHausdorffLoss(nn.Module):
     def __init__(self):
         super(AveragedHausdorffLoss, self).__init__()
+
     def cdist(self, x, y):
         """
         Compute distance between each pair of the two collections of inputs.
@@ -248,7 +255,7 @@ class AveragedHausdorffLoss(nn.Module):
 
         """
         differences = x.unsqueeze(1) - y.unsqueeze(0)
-        distances = torch.sum(differences**2, -1).sqrt()
+        distances = torch.sum(differences ** 2, -1).sqrt()
         return distances
 
     def forward(self, set1, set2):
@@ -262,8 +269,10 @@ class AveragedHausdorffLoss(nn.Module):
         """
 
         assert set1.size()[0] == set2.size()[0], 'Batch size is inconsistent!'
-        assert set1.size()[1] == set2.size()[1], 'The points in both sets must have the same number of dimensions, got %s and %s.'% (set2.size()[1], set2.size()[1])
-        
+        assert set1.size()[1] == set2.size()[
+            1], 'The points in both sets must have the same number of dimensions, got %s and %s.' % (
+        set2.size()[1], set2.size()[1])
+
         instance_num = set1.size()[0]
         ahd = 0
         for k in range(instance_num):
@@ -278,16 +287,17 @@ class AveragedHausdorffLoss(nn.Module):
 
             res = term_1 + term_2
             ahd += res
-        
+
         if instance_num != 0:
             ahd = ahd / instance_num
         return ahd
 
+
 class WeightedHausdorffDistance(nn.Module):
     def __init__(self,
-                 resized_height, 
+                 resized_height,
                  resized_width,
-                 alpha = -9,
+                 alpha=-9,
                  return_2_terms=False,
                  device=torch.device('cuda')):
         """
@@ -308,7 +318,7 @@ class WeightedHausdorffDistance(nn.Module):
                                          dtype=torch.get_default_dtype(),
                                          device=device)
 
-        self.max_dist = math.sqrt(resized_height**2 + resized_width**2)
+        self.max_dist = math.sqrt(resized_height ** 2 + resized_width ** 2)
         self.n_pixels = resized_height * resized_width
         self.all_img_locations = torch.from_numpy(cartesian([np.arange(resized_height),
                                                              np.arange(resized_width)]))
@@ -324,6 +334,7 @@ class WeightedHausdorffDistance(nn.Module):
             assert not var.requires_grad, \
                 "nn criterions don't compute the gradient w.r.t. targets - please " \
                 "mark these variables as volatile or not requiring gradients"
+
     def cdist(self, x, y):
         """
         Compute distance between each pair of the two collections of inputs.
@@ -333,7 +344,7 @@ class WeightedHausdorffDistance(nn.Module):
               i.e. dist[i,j] = ||x[i,:]-y[j,:]||
         """
         differences = x.unsqueeze(1) - y.unsqueeze(0)
-        distances = torch.sum(differences**2, -1).sqrt()
+        distances = torch.sum(differences ** 2, -1).sqrt()
         return distances
 
     def generaliz_mean(self, tensor, dim, alpha=-9, keepdim=False):
@@ -360,9 +371,9 @@ class WeightedHausdorffDistance(nn.Module):
         :param p: (float<0).
         """
         assert alpha < 0, 'alpha should be less than 0.'
-        res= torch.mean((tensor + 1e-6)**alpha, dim, keepdim=keepdim)**(1./alpha)
+        res = torch.mean((tensor + 1e-6) ** alpha, dim, keepdim=keepdim) ** (1. / alpha)
         return res
-        
+
     def forward(self, prob_map, gt_map):
         """
         Compute the Weighted Hausdorff Distance function
@@ -387,19 +398,18 @@ class WeightedHausdorffDistance(nn.Module):
                  the two terms of the Weighted Hausdorff Distance.
         """
 
-        #self._assert_no_grad(gt)
+        # self._assert_no_grad(gt)
         if DEBUG:
             print('prob_map.shape:', prob_map.shape)
             print('gt_map.shape:', gt_map.shape)
 
-
         assert prob_map.size()[2:4] == (self.height, self.width), \
             'You must configure the WeightedHausdorffDistance with the height and width of the ' \
-            'probability map that you are using, got a probability map of size %s'\
+            'probability map that you are using, got a probability map of size %s' \
             % str(prob_map.size())
 
         batch_size = prob_map.shape[0]
-        assert batch_size == gt_map.shape[0],'Batch num for ouput != batch num of gt'
+        assert batch_size == gt_map.shape[0], 'Batch num for ouput != batch num of gt'
         terms_1, terms_2 = [], []
         for b in range(batch_size):
             # One by one
@@ -410,12 +420,12 @@ class WeightedHausdorffDistance(nn.Module):
             if DEBUG:
                 print('n_gt_pts:', n_gt_pts)
                 print('gt_pts:', gt_pts)
-                import matplotlib.pyplot as plt 
+                import matplotlib.pyplot as plt
                 a = gt_b.cpu().numpy()
                 b = gt_pts.cpu().numpy()
                 plt.imshow(a)
                 for k in range(len(b)):
-                    plt.plot(b[k][1], b[k][0],'g+')
+                    plt.plot(b[k][1], b[k][0], 'g+')
                 plt.savefig('gt_pt_map.png')
                 plt.close()
             # Corner case: no GT points
@@ -425,14 +435,14 @@ class WeightedHausdorffDistance(nn.Module):
                 terms_2.append(torch.tensor([self.max_dist],
                                             dtype=torch.get_default_dtype()))
                 continue
-            
+
             if DEBUG:
                 print('loc.size:', self.all_img_locations.size())
                 print('gt_pts.size:', gt_pts.size())
 
             # Pairwise distances between all possible locations and the GTed locations
-            normalized_x =  self.all_img_locations.float()
-            normalized_y =  gt_pts.float()
+            normalized_x = self.all_img_locations.float()
+            normalized_y = gt_pts.float()
 
             d_matrix = self.cdist(normalized_x, normalized_y)
 
@@ -462,8 +472,9 @@ class WeightedHausdorffDistance(nn.Module):
             res = terms_1.mean(), terms_2.mean()
         else:
             res = terms_1.mean() + terms_2.mean()
-        
+
         return res
+
 
 class AttentionLoss(nn.Module):
     def __init__(self, beta=4, gamma=0.5):
@@ -559,7 +570,7 @@ def load_model(net, optim, scheduler, recorder, model_dir, resume=True, epoch=-1
     if not resume:
         os.system('rm -rf {}'.format(model_dir))
         return 0
-    
+
     if not os.path.exists(model_dir):
         print(colored('WARNING: NO MODEL LOADED !!!', 'red'))
         return 0
@@ -574,7 +585,7 @@ def load_model(net, optim, scheduler, recorder, model_dir, resume=True, epoch=-1
         pth = epoch
     print('load model: {}'.format(os.path.join(model_dir, '{}.pth'.format(pth))))
     pretrained_model = torch.load(os.path.join(model_dir, '{}.pth'.format(pth)))
-  
+
     net.load_state_dict(pretrained_model['net'])
     optim.load_state_dict(pretrained_model['optim'])
     scheduler.load_state_dict(pretrained_model['scheduler'])

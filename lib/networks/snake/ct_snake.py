@@ -1,14 +1,20 @@
 import torch.nn as nn
+
 from .dla import DLASeg
+print("HERE DCN_V")
 from .evolve import Evolution
 from lib.utils import net_utils, data_utils
 from lib.utils.snake import snake_decode
 from lib.config import cfg
 import torch
 
+print("HERE DCN,EU,ROI")
+
 DEBUG = False
+
+
 class Network(nn.Module):
-    def __init__(self, num_layers, heads, head_conv=256, down_ratio=4, det_dir=''):
+    def __init__(self, num_layers, heads, head_conv, down_ratio=4, det_dir=''):
         super(Network, self).__init__()
 
         self.dla = DLASeg('dla{}'.format(num_layers), heads,
@@ -42,3 +48,4 @@ class Network(nn.Module):
 def get_network(num_layers, heads, head_conv=256, down_ratio=4, det_dir=''):
     network = Network(num_layers, heads, head_conv, down_ratio, det_dir)
     return network
+

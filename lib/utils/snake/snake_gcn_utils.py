@@ -2,11 +2,13 @@ import torch
 import numpy as np
 from lib.utils.snake import snake_decode, snake_config
 from lib.csrc.extreme_utils import _ext as extreme_utils
+print("HERE EU")
 from lib.utils import data_utils
 from lib.config import cfg
 
-
 DEBUG = True
+
+
 def collect_training(poly, ct_01):
     batch_size = ct_01.size(0)
     poly = torch.cat([poly[i][ct_01[i]] for i in range(batch_size)], dim=0)
@@ -33,26 +35,26 @@ def prepare_testing_init(box, score):
     else:
         i_it_4pys = snake_decode.get_init(box)
 
-    init_boxes  = i_it_4pys
+    init_boxes = i_it_4pys
     i_it_4pys = uniform_upsample(i_it_4pys, snake_config.init_poly_num)
     c_it_4pys = img_poly_to_can_poly(i_it_4pys)
 
     if 0:
         print('--------- vis init-pts ---------')
-        import matplotlib.pyplot as plt 
-        boxes = box.cpu().numpy()[0,...]
-        init_boxes = init_boxes.cpu().numpy()[0,...]
-        init_polys = i_it_4pys.cpu().numpy()[0,...]
+        import matplotlib.pyplot as plt
+        boxes = box.cpu().numpy()[0, ...]
+        init_boxes = init_boxes.cpu().numpy()[0, ...]
+        init_polys = i_it_4pys.cpu().numpy()[0, ...]
         I = np.zeros((100, 100))
         plt.imshow(I)
         for k in range(1):
             box = boxes[k]
-            init_poly = init_polys[k,...]
-            init_box = init_boxes[k,...]
-            init_poly = np.concatenate((init_poly,init_poly[0:1,:]), axis=0)
-            init_box  = np.concatenate((init_box, init_box[0:1,:]), axis=0)
-            plt.plot(init_box[:,0], init_box[:,1])
-            plt.plot(init_poly[:15,0], init_poly[:15,1],'r+')
+            init_poly = init_polys[k, ...]
+            init_box = init_boxes[k, ...]
+            init_poly = np.concatenate((init_poly, init_poly[0:1, :]), axis=0)
+            init_box = np.concatenate((init_box, init_box[0:1, :]), axis=0)
+            plt.plot(init_box[:, 0], init_box[:, 1])
+            plt.plot(init_poly[:15, 0], init_poly[:15, 1], 'r+')
         plt.show()
         exit()
 
@@ -63,7 +65,7 @@ def prepare_testing_init(box, score):
     ind = score > snake_config.ct_score
     if 0:
         print('ind:', ind)
-        print('ind.shape:',ind.size())
+        print('ind.shape:', ind.size())
         for k in range(ind.size(0)):
             a = torch.full([ind[k].sum()], k)
             print('a:', a)
@@ -154,21 +156,21 @@ def prepare_training(ret, batch):
         init.update({'neg_c_it_py': collect_training(batch['neg_c_it_py'], ct_01)})
         init.update({'neg_i_gt_py': collect_training(batch['neg_i_gt_py'], ct_01)})
         init.update({'neg_c_gt_py': collect_training(batch['neg_c_gt_py'], ct_01)})
-    
+
     ct_num = batch['meta']['ct_num']
     init.update({'4py_ind': torch.cat([torch.full([ct_num[i]], i) for i in range(ct_01.size(0))], dim=0)})
     init.update({'py_ind': init['4py_ind']})
-    
+
     if 0:
         print('-------------------preparing training--------------------')
         print('ct_01:', ct_01)
         print('ct_num:', ct_num)
         a = init['i_it_py']
         b = init['neg_i_it_py']
-        import matplotlib.pyplot as plt 
+        import matplotlib.pyplot as plt
         I = np.zeros((128, 128))
         plt.imshow(I)
-        
+
         valid_inds = init['py_ind']
 
         print('valid_inds:', valid_inds)
@@ -230,23 +232,23 @@ def prepare_testing_evolve(ex):
             i_it_pys = uniform_upsample(ex[None], snake_config.poly_num)[0]
         else:
             if cfg.ex_type == 'corner':
-                i_it_pys  = ex[None]
+                i_it_pys = ex[None]
             else:
                 i_it_pys = snake_decode.get_octagon(ex[None])
             i_it_pys = uniform_upsample(i_it_pys, snake_config.poly_num)[0]
-        
+
         if 0:
             xx = ex.cpu().numpy()
             yy = i_it_pys.cpu().numpy()
             print('xx.shape:', xx.shape)
-            I = np.zeros((128,128))
-            import matplotlib.pyplot as plt 
+            I = np.zeros((128, 128))
+            import matplotlib.pyplot as plt
             plt.imshow(I)
             for i in range(len(xx)):
                 x = xx[i]
                 y = yy[i]
-                plt.plot(x[:,0], x[:,1],'ro-')
-                plt.plot(y[:,0], y[:,1],'r+-')
+                plt.plot(x[:, 0], x[:, 1], 'ro-')
+                plt.plot(y[:, 0], y[:, 1], 'r+-')
             plt.show()
 
         c_it_pys = img_poly_to_can_poly(i_it_pys)
@@ -263,9 +265,9 @@ def get_gcn_feature(cnn_feature, img_poly, ind, h, w):
     gcn_feature = torch.zeros([img_poly.size(0), cnn_feature.size(1), img_poly.size(1)]).to(img_poly.device)
     for i in range(batch_size):
         poly = img_poly[ind == i].unsqueeze(0)
-        feature = torch.nn.functional.grid_sample(cnn_feature[i:i+1], poly)[0].permute(1, 0, 2)
+        feature = torch.nn.functional.grid_sample(cnn_feature[i:i + 1], poly)[0].permute(1, 0, 2)
         gcn_feature[ind == i] = feature
-    
+
     return gcn_feature
 
 
@@ -340,4 +342,3 @@ def zoom_poly(poly, scale):
     poly = poly - mean
     poly = poly * scale + mean
     return poly
-

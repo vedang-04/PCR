@@ -77,9 +77,9 @@ def instances2dict(imageFileList, verbose=False):
 
 def main(argv):
     fileList = []
-    if (len(argv) > 2):
+    if len(argv) > 2:
         for arg in argv:
-            if ("png" in arg):
+            if "png" in arg:
                 fileList.append(arg)
     instances2dict(fileList, True)
 

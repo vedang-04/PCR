@@ -1,4 +1,6 @@
 from lib.config import cfg
+
+
 class DatasetCatalog(object):
     dataset_attrs = {
         'CtwTrain': {
@@ -46,7 +48,7 @@ class DatasetCatalog(object):
         'MsraMini': {
             'id': 'msra',
             'data_root': 'data/msra/train/images',
-            'ann_file':  'data/msra/train/msra_train_instance.json',
+            'ann_file': 'data/msra/train/msra_train_instance.json',
             'split': 'mini'
         },
         'IC15Train': {
@@ -58,7 +60,7 @@ class DatasetCatalog(object):
         'IC15Mini': {
             'id': 'ic15',
             'data_root': 'data/ic15/train/images',
-            'ann_file':  'data/ic15/train/ic15_train_instance.json',
+            'ann_file': 'data/ic15/train/ic15_train_instance.json',
             'split': 'mini'
         },
         'MltTrain': {
@@ -79,4 +81,3 @@ class DatasetCatalog(object):
     def get(name):
         attrs = DatasetCatalog.dataset_attrs[name]
         return attrs.copy()
-

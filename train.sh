@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 source activate pt_v1.1
-training_set='ctw'
+training_set='msra'
 framework='PCR'
 version='v0'
 yml_config_file="configs/${training_set}_snake.yaml"
@@ -21,6 +21,7 @@ cp -r $det_config_file $outputs
 cp -r $snake_cfg_file $outputs
 
 start_time=`date "+%Y-%m-%d %H:%M:%S"`
+
 python train_net.py \
     --model_dir ${model_dir} \
     --record_dir ${record_dir} \

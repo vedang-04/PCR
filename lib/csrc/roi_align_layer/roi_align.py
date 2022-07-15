@@ -6,8 +6,10 @@ from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
 import lib.csrc.roi_align_layer._roi_align as _roi_align
+print("HERE ROI_ALIGN")
 
 from apex import amp
+
 
 class _ROIAlign(Function):
     @staticmethod
@@ -46,6 +48,7 @@ class _ROIAlign(Function):
 
 
 roi_align_func = _ROIAlign.apply
+
 
 class ROIAlign(nn.Module):
     def __init__(self, output_size, spatial_scale=1., sampling_ratio=0):

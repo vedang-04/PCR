@@ -69,7 +69,22 @@ ext_modules = [
     Extension(
         "bbox",
         ["bbox.pyx"],
-        extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"]},
+        extra_compile_args={'gcc': ["-Wno-cpp", "-Wno-unused-function"],"cxx": ['-std=c++14'],'nvcc':[
+            "-DCUDA_HAS_FP16=1",
+            "-D__CUDA_NO_HALF_OPERATORS__",
+            "-D__CUDA_NO_HALF_CONVERSIONS__",
+            "-D__CUDA_NO_HALF2_OPERATORS__",
+            '-gencode', 'arch=compute_60,code=sm_60',
+            '-gencode', 'arch=compute_61,code=sm_61',
+            '-gencode', 'arch=compute_70,code=sm_70',
+            '-gencode', 'arch=compute_70,code=compute_70',
+            '-gencode', 'arch=compute_37,code=sm_37',
+            '-gencode', 'arch=compute_50,code=sm_50',
+            '-gencode', 'arch=compute_37,code=compute_37',
+            '-gencode', 'arch=compute_60,code=compute_60',
+            '-gencode', 'arch=compute_61,code=compute_61',
+            '-gencode', 'arch=compute_50,code=compute_50',
+        ]},
         include_dirs=[numpy_include]
     ),
 ]

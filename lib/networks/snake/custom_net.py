@@ -3,18 +3,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 from lib.config import cfg
 from lib.csrc.roi_align_layer.roi_align import ROIAlign
+print("HERE ROI")
 
 DEBUG = False
+
+
 class CircConv(nn.Module):
     def __init__(self, state_dim, out_state_dim=None, n_adj=4):
         super(CircConv, self).__init__()
         self.n_adj = n_adj
         out_state_dim = state_dim if out_state_dim is None else out_state_dim
-        self.fc = nn.Conv1d(state_dim, out_state_dim, kernel_size=self.n_adj*2+1)
+        self.fc = nn.Conv1d(state_dim, out_state_dim, kernel_size=self.n_adj * 2 + 1)
 
     def forward(self, input, adj):
         input = torch.cat([input[..., -self.n_adj:], input, input[..., :self.n_adj]], dim=2)
         return self.fc(input)
+
 
 class DilatedCircConv(nn.Module):
     def __init__(self, state_dim, out_state_dim=None, n_adj=4, dilation=1):
@@ -23,18 +27,22 @@ class DilatedCircConv(nn.Module):
         self.n_adj = n_adj
         self.dilation = dilation
         out_state_dim = state_dim if out_state_dim is None else out_state_dim
-        self.fc = nn.Conv1d(state_dim, out_state_dim, kernel_size=self.n_adj*2+1, dilation=self.dilation)
+        self.fc = nn.Conv1d(state_dim, out_state_dim, kernel_size=self.n_adj * 2 + 1, dilation=self.dilation)
 
     def forward(self, input, adj=None):
         if self.n_adj != 0:
-            input = torch.cat([input[..., -self.n_adj*self.dilation:], input, input[..., :self.n_adj*self.dilation]], dim=2)
-            
+            input = torch.cat(
+                [input[..., -self.n_adj * self.dilation:], input, input[..., :self.n_adj * self.dilation]], dim=2)
+
         return self.fc(input)
+
 
 _conv_factory = {
     'grid': CircConv,
     'dgrid': DilatedCircConv
 }
+
+
 class BasicBlock(nn.Module):
     def __init__(self, state_dim, out_state_dim, conv_type, n_adj=4, dilation=1):
         super(BasicBlock, self).__init__()
@@ -48,6 +56,7 @@ class BasicBlock(nn.Module):
         x = self.relu(x)
         x = self.norm(x)
         return x
+
 
 class ClsNet(nn.Module):
     def __init__(self, input_dim=128, roi_h=7, roi_w=7):
@@ -71,9 +80,9 @@ class ClsNet(nn.Module):
         # )
         self.avgpool = nn.AvgPool2d(roi_h)
         self.fc_layers = nn.Sequential(
-            nn.Linear(128,128),
+            nn.Linear(128, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128,128),
+            nn.Linear(128, 128),
             nn.ReLU(inplace=True)
         )
 
@@ -91,6 +100,7 @@ class ClsNet(nn.Module):
         rois = rcnn_snake_utils.box_to_roi(bboxes, batch['act_01'].byte())
         roi = self.pooler(cnn_feature, rois)
         return roi
+
     def prepare_testing(self, cnn_feature, output):
         if rcnn_snake_config.nms_ct:
             detection, ind = self.nms_abox(output)
@@ -109,28 +119,28 @@ class ClsNet(nn.Module):
         return roi
 
     def preparing_hbb(self, polys, poly_inds):
-        xmin = torch.min(polys[:,:,0], dim=-1)[0]
-        ymin = torch.min(polys[:,:,1], dim=-1)[0]
-        xmax = torch.max(polys[:,:,0], dim=-1)[0]
-        ymax = torch.max(polys[:,:,1], dim=-1)[0]
-        hbbs = torch.cat([xmin[...,None],ymin[...,None],xmax[...,None],ymax[...,None]], dim=-1)
-        rois = torch.cat([poly_inds[:,None], hbbs], dim=-1)
+        xmin = torch.min(polys[:, :, 0], dim=-1)[0]
+        ymin = torch.min(polys[:, :, 1], dim=-1)[0]
+        xmax = torch.max(polys[:, :, 0], dim=-1)[0]
+        ymax = torch.max(polys[:, :, 1], dim=-1)[0]
+        hbbs = torch.cat([xmin[..., None], ymin[..., None], xmax[..., None], ymax[..., None]], dim=-1)
+        rois = torch.cat([poly_inds[:, None], hbbs], dim=-1)
         if 0:
-            import matplotlib.pyplot as plt 
-            import numpy 
-            import numpy as np 
+            import matplotlib.pyplot as plt
+            import numpy
+            import numpy as np
             x = polys.detach().cpu().numpy()
             y = hbbs.detach().cpu().numpy()
-            I = np.zeros((128,128))
-            
+            I = np.zeros((128, 128))
+
             for k in range(len(x)):
                 plt.imshow(I)
                 ply = x[k]
                 hbb = y[k]
-                xmin,ymin,xmax,ymax = hbb
-                hbb_pts = np.array([xmin,ymin,xmax,ymin,xmax,ymax,xmin,ymax,xmin,ymin]).reshape(-1,2)
-                plt.plot(ply[:,0], ply[:,1],'r')
-                plt.plot(hbb_pts[:,0], hbb_pts[:,1], 'g+--')
+                xmin, ymin, xmax, ymax = hbb
+                hbb_pts = np.array([xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax, xmin, ymin]).reshape(-1, 2)
+                plt.plot(ply[:, 0], ply[:, 1], 'r')
+                plt.plot(hbb_pts[:, 0], hbb_pts[:, 1], 'g+--')
                 plt.show()
                 plt.close()
         return rois
@@ -149,7 +159,7 @@ class ClsNet(nn.Module):
             if DEBUG:
                 print("conv_feat.shape:", conv_feat.shape)
             feat = self.avgpool(conv_feat)
-            feat = self.fc_layers(feat.view(feat.shape[0],-1))
+            feat = self.fc_layers(feat.view(feat.shape[0], -1))
             cls_output = self.cls_fc(feat)
             if DEBUG:
                 print("cls_output.shape:", cls_output.shape)
@@ -164,8 +174,8 @@ class ClsNet(nn.Module):
                 rois = self.preparing_hbb(polys, poly_inds.to(polys.device))
                 roi_feat = self.pooler(cnn_feature, rois)
                 conv_feat = self.convs(roi_feat)
-                feat  = self.avgpool(conv_feat)
-                feat = self.fc_layers(feat.view(feat.shape[0],-1))
+                feat = self.avgpool(conv_feat)
+                feat = self.fc_layers(feat.view(feat.shape[0], -1))
                 cls_output = self.cls_fc(feat)
                 soft_cls_output = F.softmax(cls_output, dim=-1)
             return soft_cls_output

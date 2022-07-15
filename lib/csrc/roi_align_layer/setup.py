@@ -11,13 +11,13 @@ from torch.utils.cpp_extension import CUDA_HOME
 from torch.utils.cpp_extension import CppExtension
 from torch.utils.cpp_extension import CUDAExtension
 
+
 requirements = ["torch", "torchvision"]
 
 
 def get_extensions():
     this_dir = os.path.dirname(os.path.abspath(__file__))
     extensions_dir = this_dir
-
     main_file = glob.glob(os.path.join(extensions_dir, "*.cpp"))
     source_cpu = glob.glob(os.path.join(extensions_dir, "cpu", "*.cpp"))
     source_cuda = glob.glob(os.path.join(extensions_dir, "cuda", "*.cu"))
@@ -25,7 +25,7 @@ def get_extensions():
     sources = main_file + source_cpu
     extension = CppExtension
 
-    extra_compile_args = {"cxx": []}
+    extra_compile_args = {"cxx": ['-std=c++14']}
     define_macros = []
 
     if (torch.cuda.is_available() and CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1":
@@ -37,7 +37,20 @@ def get_extensions():
             "-D__CUDA_NO_HALF_OPERATORS__",
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
+            '-gencode', 'arch=compute_60,code=sm_60',
+            '-gencode', 'arch=compute_61,code=sm_61',
+            '-gencode', 'arch=compute_70,code=sm_70',
+            '-gencode', 'arch=compute_70,code=compute_70',
+            '-gencode', 'arch=compute_37,code=sm_37',
+            '-gencode', 'arch=compute_50,code=sm_50',
+            '-gencode', 'arch=compute_37,code=compute_37',
+            '-gencode', 'arch=compute_60,code=compute_60',
+            '-gencode', 'arch=compute_61,code=compute_61',
+            '-gencode', 'arch=compute_50,code=compute_50',
         ]
+        CC = os.environ.get("CC", None)
+        if CC is not None:
+            extra_compile_args["nvcc"].append("-ccbin={}".format(CC))
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
 
@@ -52,7 +65,6 @@ def get_extensions():
             extra_compile_args=extra_compile_args,
         )
     ]
-
     return ext_modules
 
 

@@ -2,10 +2,13 @@ import torch.nn as nn
 import torch
 from lib.utils import data_utils
 from lib.csrc.extreme_utils import _ext as extreme_utils
+print("HERE EU")
 from lib.utils.snake import snake_config
 from lib.config import cfg
 
 DEBUG = False
+
+
 def nms(heat, kernel=3):
     pad = (kernel - 1) // 2
 
@@ -57,15 +60,15 @@ def decode_ct_hm(ct_hm, wh, reg=None, K=100):
     ct_hm = nms(ct_hm)
     scores, inds, clses, ys, xs = topk(ct_hm, K=K)
     wh = transpose_and_gather_feat(wh, inds)
-    
+
     if cfg.dist_4d:
         wh = wh.view(batch, K, 4)
     else:
         wh = wh.view(batch, K, 2)
-    
+
     if DEBUG:
         print('wh.size:', wh.size())
-   
+
     if reg is not None:
         reg = transpose_and_gather_feat(reg, inds)
         reg = reg.view(batch, K, 2)
@@ -160,18 +163,20 @@ def get_box(box):
     box = torch.stack(box, dim=2).view(x_min.size(0), x_min.size(1), 8, 2)
     return box
 
+
 def get_corner(box):
     xmin, ymin, xmax, ymax = box[..., 0], box[..., 1], box[..., 2], box[..., 3]
     box = [xmin, ymin,
-           xmin, ymax, 
-           xmax, ymax, 
+           xmin, ymax,
+           xmax, ymax,
            xmax, ymin
            ]
-    box = torch.stack(box, dim=2).view(xmin.size(0), xmin.size(1),4,2)
+    box = torch.stack(box, dim=2).view(xmin.size(0), xmin.size(1), 4, 2)
 
     return box
 
-def get_init(box, init_type = 'quadrangle'):
+
+def get_init(box, init_type='quadrangle'):
     if init_type == 'quadrangle':
         return get_quadrangle(box)
     elif init_type == 'corner':

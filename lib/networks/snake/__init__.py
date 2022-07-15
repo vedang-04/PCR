@@ -15,5 +15,6 @@ def get_network(cfg):
     arch = arch[:arch.find('_')] if '_' in arch else arch
     get_model = _network_factory[arch]
     network = get_model(num_layers, heads, head_conv, snake_config.down_ratio, cfg.det_dir)
+    # network = get_ro(heads)
     return network
 

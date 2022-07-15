@@ -2,14 +2,14 @@
 source activate pt_v1.1
 test_epoch=-1
 data_path='data'
-training_set='ctw'
-testing_set='ctw'
+training_set='msra'
+testing_set='msra'
 framework='PCR'
 version='v0'
 ct_score=0.35
 type='inference_fast'  # 'inference' or 'inference_fast'. Noting that 'inference_fast' is accerlarate version for NMS
 
-if [ "$testing_set" = "ctw" ];then
+if [ "$testing_set" = "msra" ];then
   img_dir="${data_path}/${testing_set}/test/text_image_org"
   gt_dir="${data_path}/${testing_set}/test/text_label_circum"
   mat_gt_dir="${data_path}/${testing_set}/test/text_label_curve_mat"
@@ -65,7 +65,7 @@ if true;then
           ct_score ${ct_score}
 fi
 #============================================ Evaluating =================================================#
-if [ "$testing_set" = "ctw" ];then
+if [ "$testing_set" = "msra" ];then
   if true;then
 	rm -r ${eval_dir}
     iou_eval_res_file=${eval_dir}/iou_eval_res.txt

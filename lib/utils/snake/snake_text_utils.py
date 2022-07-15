@@ -10,8 +10,10 @@ import math
 DEBUG = False
 
 CLASSES = (
-        "text",
-    )
+    "text",
+)
+
+
 def xywh_to_xyxy(boxes):
     """
     boxes: [[x, y, w, h]]
@@ -39,17 +41,18 @@ def augment(img, split, _data_rng, _eig_val, _eig_vec, mean, std, polys=None):
 
     # random crop and flip augmentation
     flipped = False
+    rot_angle = 0
     if split == 'train':
-        #scale = scale * np.random.uniform(0.6, 1.4)
-        #angle_ranges = np.arange(-30,30,3)
-        #rnd_ind = np.random.randint(0, len(angle_ranges))
-        #rot_angle = angle_ranges[int(rnd_ind)]
+        # scale = scale * np.random.uniform(0.6, 1.4)
+        # angle_ranges = np.arange(-30,30,3)
+        # rnd_ind = np.random.randint(0, len(angle_ranges))
+        # rot_angle = angle_ranges[int(rnd_ind)]
         scale = scale * np.random.uniform(0.5, 2.0)
-        rot_angle = np.random.randint(0,4) * 90
+        rot_angle = np.random.randint(0, 4) * 90
 
         x, y = center
-        w_border = data_utils.get_border(width/4, scale[0]) + 1
-        h_border = data_utils.get_border(height/4, scale[0]) + 1
+        w_border = data_utils.get_border(width / 4, scale[0]) + 1
+        h_border = data_utils.get_border(height / 4, scale[0]) + 1
         center[0] = np.random.randint(low=max(x - w_border, 0), high=min(x + w_border, width - 1))
         center[1] = np.random.randint(low=max(y - h_border, 0), high=min(y + h_border, height - 1))
 
@@ -122,7 +125,8 @@ def handle_break_point(poly, axis, number, outside_border):
     for i in range(len(break_points)):
         current_poly = poly[break_points[i]]
         next_poly = poly[break_points[i] + 1]
-        mid_poly = current_poly + (next_poly - current_poly) * (number - current_poly[axis]) / (next_poly[axis] - current_poly[axis])
+        mid_poly = current_poly + (next_poly - current_poly) * (number - current_poly[axis]) / (
+                    next_poly[axis] - current_poly[axis])
 
         if outside_border(poly[break_points[i], axis], number):
             if mid_poly[axis] != next_poly[axis]:
@@ -137,7 +141,8 @@ def handle_break_point(poly, axis, number, outside_border):
     if outside_border(poly[-1, axis], number) != outside_border(poly[0, axis], number):
         current_poly = poly[-1]
         next_poly = poly[0]
-        mid_poly = current_poly + (next_poly - current_poly) * (number - current_poly[axis]) / (next_poly[axis] - current_poly[axis])
+        mid_poly = current_poly + (next_poly - current_poly) * (number - current_poly[axis]) / (
+                    next_poly[axis] - current_poly[axis])
         new_poly.append([mid_poly])
 
     return np.concatenate(new_poly)
@@ -343,15 +348,17 @@ def get_box(box):
     ]
     return np.array(box)
 
+
 def get_corner(box):
     xmin, ymin, xmax, ymax = box
-    box = [[xmin, ymin], 
-           [xmin, ymax], 
-           [xmax, ymax], 
+    box = [[xmin, ymin],
+           [xmin, ymax],
+           [xmax, ymax],
            [xmax, ymin]
            ]
 
     return np.array(box)
+
 
 def get_init(box, init_type='quadrangle'):
     if init_type == 'quadrangle':
@@ -385,10 +392,10 @@ def get_octagon(ex):
 
 def uniform_sample_init(poly):
     polys = []
-    ind = np.array(list(range(0, len(poly), len(poly)//4)))
+    ind = np.array(list(range(0, len(poly), len(poly) // 4)))
     next_ind = np.roll(ind, shift=-1)
     for i in range(len(ind)):
-        poly_ = poly[ind[i]:ind[i]+len(poly)//4]
+        poly_ = poly[ind[i]:ind[i] + len(poly) // 4]
         poly_ = np.append(poly_, [poly[next_ind[i]]], axis=0)
         poly_ = uniform_sample_segment(poly_, snake_config.init_poly_num // 4)
         polys.append(poly_)
@@ -533,7 +540,6 @@ def add_gaussian_noise(poly, x_min, y_min, x_max, y_max):
 
 
 def clip_poly_to_image(poly, h, w):
-    poly[:, 0] = np.clip(poly[:, 0], a_min=0, a_max=w-1)
-    poly[:, 1] = np.clip(poly[:, 1], a_min=0, a_max=h-1)
+    poly[:, 0] = np.clip(poly[:, 0], a_min=0, a_max=w - 1)
+    poly[:, 1] = np.clip(poly[:, 1], a_min=0, a_max=h - 1)
     return poly
-

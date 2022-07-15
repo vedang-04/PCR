@@ -17,7 +17,6 @@ from lib.networks.dcn_v2 import DCN
 from lib.config import cfg
 from thop import profile
 
-
 from .resnet import ResNet
 from .resnet import Bottleneck as Res_Bottleneck
 
@@ -25,8 +24,11 @@ BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
 
 DEBUG = False
+
+
 def get_model_url(data='imagenet', name='dla34', hash='ba72cf86'):
     return join('http://dl.yf.io/dla/models', data, '{}-{}.pth'.format(name, hash))
+
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -304,7 +306,7 @@ class DLA(nn.Module):
         else:
             model_url = get_model_url(data, name, hash)
             model_weights = model_zoo.load_url(model_url)
-        
+
         num_classes = len(model_weights[list(model_weights.keys())[-1]])
         self.fc = nn.Conv2d(
             self.channels[-1], num_classes,
@@ -317,11 +319,12 @@ def dla34(pretrained=True, **kwargs):  # DLA-34
     model = DLA([1, 1, 1, 2, 2, 1],
                 [16, 32, 64, 128, 256, 512],
                 block=BasicBlock, **kwargs)
-   
+
     if pretrained:
         print("Loading dla34-pretrained_imagenet...")
         model.load_pretrained_model(data='imagenet', name='dla34', hash='ba72cf86')
     return model
+
 
 def resnet50(pretrained=True, **kwargs):
     model = ResNet(Res_Bottleneck, [3, 4, 6, 3], [64, 64, 256, 512, 1024, 2048], **kwargs)
@@ -396,12 +399,12 @@ class IDAUp(nn.Module):
         for i in range(startp + 1, endp):
             upsample = getattr(self, 'up_' + str(i - startp))
             project = getattr(self, 'proj_' + str(i - startp))
-                
+
             layers[i] = upsample(project(layers[i]))
-            
+
             node = getattr(self, 'node_' + str(i - startp))
             layers[i] = node(layers[i] + layers[i - 1])
-        
+
 
 class DLAUp(nn.Module):
     def __init__(self, startp, channels, scales, in_channels=None):
@@ -421,13 +424,14 @@ class DLAUp(nn.Module):
 
     def forward(self, layers):
         out = [layers[-1]]  # start with 32
-        
+
         for i in range(len(layers) - self.startp - 1):
             ida = getattr(self, 'ida_{}'.format(i))
             ida(layers, len(layers) - i - 2, len(layers))
-            
+
             out.insert(0, layers[-1])
         return out
+
 
 class FeatEnhance(nn.Module):
     def __init__(self, o, channels, up_f, emb_type=None):
@@ -447,23 +451,23 @@ class FeatEnhance(nn.Module):
             setattr(self, 'proj_' + str(i), proj)
             setattr(self, 'up_' + str(i), up)
             setattr(self, 'node_' + str(i), node)
-            
+
             if emb_type == 'sa':
-                sa = SpatialAttention(kernel_size = 3)
+                sa = SpatialAttention(kernel_size=3)
                 setattr(self, 'enhance_' + str(i), sa)
 
     def forward(self, layers, startp, endp, debug=None):
         for i in range(startp + 1, endp):
             upsample = getattr(self, 'up_' + str(i - startp))
             project = getattr(self, 'proj_' + str(i - startp))
-            
-            proj_feat  = project(layers[i])
-            
+
+            proj_feat = project(layers[i])
+
             layers[i] = upsample(proj_feat)
-            
+
             node = getattr(self, 'node_' + str(i - startp))
             layers[i] = node(layers[i] + layers[i - 1])
-        
+
 
 class Interpolate(nn.Module):
     def __init__(self, scale, mode):
@@ -488,17 +492,14 @@ class DLASeg(nn.Module):
         self.base = globals()[base_name](pretrained=pretrained)
         channels = self.base.channels
         scales = [2 ** i for i in range(len(channels[self.first_level:]))]
-       
 
         self.dla_up = DLAUp(self.first_level, channels[self.first_level:], scales)
         if out_channel == 0:
             out_channel = channels[self.first_level]
 
-        
-        self.feat_enhance = IDAUp(out_channel, channels[self.first_level:self.last_level+cfg.ida_exlayer],
-                            [2 ** i for i in range(self.last_level+cfg.ida_exlayer - self.first_level)])
+        self.feat_enhance = IDAUp(out_channel, channels[self.first_level:self.last_level + cfg.ida_exlayer],
+                                  [2 ** i for i in range(self.last_level + cfg.ida_exlayer - self.first_level)])
 
-       
         self.heads = heads
         for head in self.heads:
             classes = self.heads[head]
@@ -526,22 +527,20 @@ class DLASeg(nn.Module):
 
     def forward(self, x):
         x = self.base(x)
-        
+
         x = self.dla_up(x)
 
         y = []
-        for i in range(self.last_level+cfg.ida_exlayer - self.first_level):
+        for i in range(self.last_level + cfg.ida_exlayer - self.first_level):
             y.append(x[i].clone())
-       
-      
+
         self.feat_enhance(y, 0, len(y))
 
-       
         backbone_out_feat = y[-1]
 
         z = {}
         for head in self.heads:
-            if cfg.rs_att_flag and head=='rs_hm':
+            if cfg.rs_att_flag and head == 'rs_hm':
                 continue
             z[head] = self.__getattr__(head)(backbone_out_feat)
         return z, backbone_out_feat

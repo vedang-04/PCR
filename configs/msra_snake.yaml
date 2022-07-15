@@ -12,7 +12,7 @@ train:
     batch_size: 6
     dataset: 'MsraTrain'
     num_workers: 1
-    epoch: 300
+    epoch: 5
 test:
     dataset: 'MsraMini'
     batch_size: 1

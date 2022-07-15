@@ -1,7 +1,6 @@
 import torch
 from lib.utils.optimizer.radam import RAdam
 
-
 _optimizer_factory = {
     'adam': torch.optim.Adam,
     'radam': RAdam,
@@ -13,6 +12,7 @@ def make_optimizer(cfg, net):
     params = []
     lr = cfg.train.lr
     weight_decay = cfg.train.weight_decay
+    # optimizer = torch.optim.Adam(net.parameters(), lr, weight_decay=weight_decay)
 
     for key, value in net.named_parameters():
         if not value.requires_grad:
